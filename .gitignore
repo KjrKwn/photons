@@ -1,0 +1,14 @@
+# *
+.DS_Store
+*.npy
+*.d
+*~
+!*.txt
+!*.f
+!*.ipynb
+!*.c
+!*.sh
+!Makefile
+!.gitignore
+!*.awk
+!*.py
