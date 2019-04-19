@@ -66,9 +66,9 @@ c     &     "../../W7smooth2d_inst_all/SNOTRA/output/x0.4/noitex10/tmp.d")
 c      open(unit=22,status="old",file=
 c     &     "../../W7smooth2d_inst_all/SNOTRA/output/x0.4/noitex10/gamtmp.d")
       open(unit=21,status="old",file=
-     &     "../input/tmp.d")
+     &     "../../hewd/tmp.d")
       open(unit=22,status="old",file=
-     &     "../input/gamtmp.d")
+     &     "../../hewd/gamtmp.d")
 
 
       open(unit=51,status="new",file=
