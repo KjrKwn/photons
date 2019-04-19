@@ -720,7 +720,7 @@ def read_MacLeod_data(
 
 
 
-def read_one_instrument_filters(directory = "./filter_data/johnson"):
+def read_one_instrument_filters(directory = "./photontools/filter_data/johnson"):
     filter_ = Filter()
     
     if (directory.split("/")[-1] != ''):
@@ -751,7 +751,7 @@ def read_one_instrument_filters(directory = "./filter_data/johnson"):
     return filter_
 
 
-def read_all_filters(directory = "./filter_data"):
+def read_all_filters(directory = "./photontools/filter_data"):
     
     dirs = subprocess.getoutput('find {} -type d| sort | grep "filter_data/"'.format(directory)).split("\n")
     filters = [Filter()] * len(dirs)
