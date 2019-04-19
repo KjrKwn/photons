@@ -1,6 +1,6 @@
 """
 Tools to analyze outputs of radiative transfer calcultions
-developed by Kojiro Kawana 190419
+Developed by Kojiro Kawana 190419
 
 Work in python 3
 
