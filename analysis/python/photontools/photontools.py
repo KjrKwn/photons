@@ -9,6 +9,7 @@ import copy
 
 import astropy.units as u
 import astropy.constants as c
+import astropy.cosmology
 
 # bands_from_blue = np.array(["UVW2", "UVM2", "UVW1", "U", "B", "V", "R", "I", "J", "H", "K"])
 # color_from_blue = np.array([plt.cm.jet(i/bands_from_blue.size) for i in range(bands_from_blue.size)])
@@ -85,14 +86,15 @@ class Spectra(object):
     phis       :
     wavelengths:
     data       : units of erg/ s/ AA (isotropic flux)
-   
+    Doppler_shift_intrinsic: 1+z at each direction
+
     methods
     =======
     binning
     calc_bolometric_luminosity
     calc_band_light_curve
     Doppler_shift_by_intrinsic_velocity
-    # redshift
+    redshift
     # dust_extinction
     
     """
@@ -105,6 +107,22 @@ class Spectra(object):
         self.data = None # in units of erg/ s/ AA (isotropic flux)
         self.Doppler_shift_intrinsic = None # 1 + z
     
+    def __getitem__(self, *key):
+        new_spectra = copy.deepcopy(self)
+        N = len(key)
+        new_spectra.times = self.times[key[0]]
+        if (N > 1):
+            new_spectra.thetas = self.thetas[key[1]]
+            if (N > 2):
+                new_spectra.phis = self.phis[key[2]]
+                if self.Doppler_shift_intrinsic is not None:
+                    new_spectra.Doppler_shift_intrinsic = self.Doppler_shift_intrinsic[key[1:3]]
+                if (N > 3):
+                    new_spectra.wavelengths = self.wavelengths[key[3]]
+        new_spectra.data = self.data[key]
+        return new_spectra
+
+
     def binning(self,
                 every_time: int = 1,
                 N_theta_bins: int = 1,
@@ -257,25 +275,100 @@ class Spectra(object):
         """
         return _spectra_Doppler_shift_by_intrinsic_velocity(self, velocity, way_interpolate_theta_phi=way_interpolate_theta_phi, way_interpolate_wavelength=way_interpolate_wavelength, inplace=inplace)
 
-    
-    def __unit_conversion(wavelengths,
-                        data_table,
-                        distance = 10. * u.Mpc
-                       ):
+    def redshift(self,
+                 z = None,
+                 luminosity_distance = None,
+                 cosmo = None,
+                 inplace = False):
         """
-        convert unit 
-        from 
-        erg / s / AA
-        to 
-        erg / s / cm2 / AA
+        make spectra redshifted with given z or luminosity_distance and cosmo
+
+        arguments
+        =========
+        z: redshift
+        luminosity_distance: must be given with astropy.units
+        cosmo: type: astropy.cosmology. If None, we will use astropy.cosmology.Planck15
         """
 
-        if (data_table.shape[-1] != wavelengths.size):
-            raise ValueError ("shape of data_table do not match wavelengths!")
-            return
-    #     ret = data_table / (wavelengths * (u.keV / u.erg).cgs) / (4. * np.pi * (distance/u.cm).cgs ** 2)
-        ret = data_table / wavelengths / (4. * np.pi * (distance/u.cm).cgs ** 2)
-        return ret.cgs.to_value()
+        def check_arguments_and_get_z(z, luminosity_distance, cosmo):
+            if z is None:
+                if luminosity_distance is None:
+                    raise KeyError("z or luminosity_distance must be given!")
+                else:
+                    if cosmo is None:
+                        cosmo = astropy.cosmology.Planck15
+                    z = astropy.cosmology.z_at_value(cosmo.luminosity_distance, luminosity_distance)
+                    return z
+            if z is not None and luminosity_distance is not None:
+                print ("Both z and luminosity_distance are given!")
+                print ("We use z to make spectra redshited!")
+
+            return z
+
+        z = check_arguments_and_get_z(z, luminosity_distance, cosmo)
+
+        new_spectra = copy.deepcopy(self)
+        factor = 1. + z
+        new_spectra.times = self.times * factor
+        new_spectra.wavelengths = self.wavelengths * factor
+        new_spectra.data = self.data / factor
+
+        if (inplace):
+            self = new_spectra
+            return 
+        else:
+            return new_spectra
+
+    def dust_extinction(self, Eb_v, Rv=3.1, model = None, inplace=False):
+        """
+        add dust-extinction to spectra with given E(B_V)
+        calculated by dust_extinction: https://dust-extinction.readthedocs.io/
+
+        arguments
+        =========
+        Eb_v: E(B-V)
+        Rv: Rv. Default = 3.1
+        model: model of dust_extinction. In default (None), use Fitzpatrick (1999, PASP, 111, 63)
+        """
+        try:
+            from dust_extinction import parameter_averages
+        except:
+            raise ImportError("module dust_extinction is not installed!")
+        if model is None:
+            dust_ext = parameter_averages.F99().extinguish(self.wavelengths * u.AA, Ebv=Eb_v)
+        else:
+            # Todo
+            # put other models
+            raise KeyError("the model is not availavle!")
+        
+        new_spectra = copy.deepcopy(self)
+        new_spectra.data = self.data * dust_ext
+
+        if (inplace):
+            self = new_spectra
+            return 
+        else:
+            return new_spectra
+
+
+#     def __unit_conversion(wavelengths,
+#                         data_table,
+#                         distance = 10. * u.Mpc
+#                        ):
+#         """
+#         convert unit 
+#         from 
+#         erg / s / AA
+#         to 
+#         erg / s / cm2 / AA
+#         """
+# 
+#         if (data_table.shape[-1] != wavelengths.size):
+#             raise ValueError ("shape of data_table do not match wavelengths!")
+#             return
+#     #     ret = data_table / (wavelengths * (u.keV / u.erg).cgs) / (4. * np.pi * (distance/u.cm).cgs ** 2)
+#         ret = data_table / wavelengths / (4. * np.pi * (distance/u.cm).cgs ** 2)
+#         return ret.cgs.to_value()
 
 
 class Lightcurve(object):
@@ -304,6 +397,21 @@ class Lightcurve(object):
         self.bands = None
         self.data = None
     
+    def __getitem__(self, *key):
+        new_lc = copy.deepcopy(self)
+        N = len(key)
+        new_lc.times = self.times[key[0]]
+        if (N > 1):
+            new_lc.thetas = self.thetas[key[1]]
+            if (N > 2):
+                new_lc.phis = self.phis[key[2]]
+                if self.Doppler_shift_intrinsic is not None:
+                    new_lc.Doppler_shift_intrinsic = self.Doppler_shift_intrinsic[key[1:3]]
+                if (N > 3):
+                    new_lc.wavelengths = self.wavelengths[key[3]]
+        new_lc.data = self.data[key]
+        return new_lc
+
     
     
     def append_band(self, lc2, inplace=False):
