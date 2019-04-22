@@ -189,6 +189,10 @@ class Spectra(object):
         
         data = data.mean(axis=(2, 4))
 
+        # intrinsic redshift is simple mean of initial redshift
+        Doppler_shift_arr = self.Doppler_shift_intrinsic.reshape(N_theta_bins, theta_every, N_phi_bins, phi_every)
+        new_spectra.Doppler_shift_intrinsic = Doppler_shift_arr.mean(axis=(1,3))
+        
         
         # time binning
         if (every_time <= 1):
@@ -227,7 +231,7 @@ class Spectra(object):
                                 N_wavelength_bins,
                                 every_wavelength
                                )
-            # weighted mean for wavelength & time
+            # weighted mean of data for wavelength & time
             data = np.sum(data * wavelength_delta.reshape(N_wavelength_bins, every_wavelength), axis=-1) / wavelength_delta.reshape(N_wavelength_bins, every_wavelength).sum(axis=1)
         
         new_spectra.data = data
