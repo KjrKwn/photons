@@ -9,6 +9,8 @@ Module requirement
 numpy
 pandas
 astropy
+dust_extinction
+
 
 """
 
