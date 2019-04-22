@@ -95,7 +95,7 @@ class Spectra(object):
     calc_band_light_curve
     Doppler_shift_by_intrinsic_velocity
     redshift
-    # dust_extinction
+    dust_extinction
     
     """
 
@@ -263,7 +263,7 @@ class Spectra(object):
         
         !!!!Note!!!!
         This doesn't shift time bin, while spectra is shifted.
-        Time must be shifted later.
+        Only time must be shifted later.
         
         
         arguments
@@ -333,18 +333,26 @@ class Spectra(object):
         Eb_v: E(B-V)
         Rv: Rv. Default = 3.1
         model: model of dust_extinction. In default (None), use Fitzpatrick (1999, PASP, 111, 63)
+               availables are F99 or maeda
         """
-        try:
-            from dust_extinction import parameter_averages
-        except:
-            raise ImportError("module dust_extinction is not installed!")
-        if model is None:
-            dust_ext = parameter_averages.F99().extinguish(self.wavelengths * u.AA, Ebv=Eb_v)
+        model_avail = [None, "F99", "maeda", "Maeda"]
+        if not model in model_avail:
+            raise ValueError("input model is not supported!")
         else:
-            # Todo
-            # put other models
-            raise KeyError("the model is not availavle!")
-        
+            if model is None or model == "F99":
+                try:
+                    from dust_extinction import parameter_averages
+                except:
+                    raise ImportError("module dust_extinction is not installed!")
+                dust_ext = parameter_averages.F99().extinguish(self.wavelengths * u.AA, Ebv=Eb_v)
+            elif (model == "maeda" or model == "Maeda"):
+                Av = Eb_v * (Rv + 2.002 * (1.0e4 / self.wavelengths - 1. / 0.55))
+                dust_ext = 10. ** (-0.4 * Av)
+            else:
+                # Todo
+                # put other models
+                raise KeyError("the model is not availavle!")
+
         new_spectra = copy.deepcopy(self)
         new_spectra.data = self.data * dust_ext
 
@@ -353,7 +361,6 @@ class Spectra(object):
             return 
         else:
             return new_spectra
-
 
 #     def __unit_conversion(wavelengths,
 #                         data_table,
