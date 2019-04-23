@@ -35,6 +35,7 @@ def _spectra_Doppler_shift_by_intrinsic_velocity(spectra,
         raise ValueError("way_interpolate_theta_phi {} is not supported now")
 
     new_spectra = copy.deepcopy(spectra)
+    raise UserWarning("This Doppler shift only changes spectra.data!\nShift spectra.time later by yourself!")
 
     if (way_interpolate_theta_phi == "linear"):
         mean_thetas = np.append([0], spectra.thetas)
@@ -190,8 +191,9 @@ class Spectra(object):
         data = data.mean(axis=(2, 4))
 
         # intrinsic redshift is simple mean of initial redshift
-        Doppler_shift_arr = self.Doppler_shift_intrinsic.reshape(N_theta_bins, theta_every, N_phi_bins, phi_every)
-        new_spectra.Doppler_shift_intrinsic = Doppler_shift_arr.mean(axis=(1,3))
+        if self.Doppler_shift_intrinsic is not None:
+            Doppler_shift_arr = self.Doppler_shift_intrinsic.reshape(N_theta_bins, theta_every, N_phi_bins, phi_every)
+            new_spectra.Doppler_shift_intrinsic = Doppler_shift_arr.mean(axis=(1,3))
         
         
         # time binning
@@ -332,14 +334,16 @@ class Spectra(object):
         =========
         Eb_v: E(B-V)
         Rv: Rv. Default = 3.1
-        model: model of dust_extinction. In default (None), use Fitzpatrick (1999, PASP, 111, 63)
-               availables are F99 or maeda
+        model: model of dust_extinction. In default (None), use Maeda formula
+               The other available method is F99: Fitzpatrick (1999, PASP, 111, 63)
         """
         model_avail = [None, "F99", "maeda", "Maeda"]
         if not model in model_avail:
             raise ValueError("input model is not supported!")
         else:
-            if model is None or model == "F99":
+            if model is None:
+                model = "Maeda"
+            if model == "F99":
                 try:
                     from dust_extinction import parameter_averages
                 except:
@@ -407,6 +411,7 @@ class Lightcurve(object):
         self.phis = None
         self.bands = None
         self.data = None
+        self.Doppler_shift_intrinsic = None
     
     def __getitem__(self, *key):
         new_lc = copy.deepcopy(self)
@@ -895,6 +900,7 @@ def calc_band_flux(spectra: Spectra, filter: Filter):
     lc.times  = spectra.times
     lc.thetas = spectra.thetas
     lc.phis   = spectra.phis
+    lc.Doppler_shift_intrinsic = spectra.Doppler_shift_intrinsic
     lc.bands  = filter.bands
     lc.data   = np.zeros((lc.times.size, lc.thetas.size, lc.phis.size, lc.bands.size), dtype=float)
     
