@@ -35,7 +35,8 @@ def _spectra_Doppler_shift_by_intrinsic_velocity(spectra,
         raise ValueError("way_interpolate_theta_phi {} is not supported now")
 
     new_spectra = copy.deepcopy(spectra)
-    raise UserWarning("This Doppler shift only changes spectra.data!\nShift spectra.time later by yourself!")
+    print("This Doppler shift only changes spectra.data!")
+    print("Shift spectra.time later by yourself!")
 
     if (way_interpolate_theta_phi == "linear"):
         mean_thetas = np.append([0], spectra.thetas)
