@@ -1,4 +1,5 @@
 numpy
+matplotlib
 pandas
 astropy
 dust_extinction

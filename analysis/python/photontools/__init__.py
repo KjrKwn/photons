@@ -7,6 +7,7 @@ Work in python 3
 Module requirement
 ==================
 numpy
+matplotlib
 pandas
 astropy
 dust_extinction
