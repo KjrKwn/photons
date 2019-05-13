@@ -109,18 +109,22 @@ class Spectra(object):
         self.data = None # in units of erg/ s/ AA (isotropic flux)
         self.Doppler_shift_intrinsic = None # 1 + z
     
-    def __getitem__(self, *key):
+    def __getitem__(self, key):
         new_spectra = copy.deepcopy(self)
-        N = len(key)
-        new_spectra.times = self.times[key[0]]
-        if (N > 1):
-            new_spectra.thetas = self.thetas[key[1]]
-            if (N > 2):
-                new_spectra.phis = self.phis[key[2]]
-                if self.Doppler_shift_intrinsic is not None:
-                    new_spectra.Doppler_shift_intrinsic = self.Doppler_shift_intrinsic[key[1:3]]
-                if (N > 3):
-                    new_spectra.wavelengths = self.wavelengths[key[3]]
+        if type(key) != tuple:
+            # only 1st index is given
+            new_spectra.times = self.times[key]
+        else:
+            N = len(key)
+            new_spectra.times = self.times[key[0]]
+            if (N > 1):
+                new_spectra.thetas = self.thetas[key[1]]
+                if (N > 2):
+                    new_spectra.phis = self.phis[key[2]]
+                    if self.Doppler_shift_intrinsic is not None:
+                        new_spectra.Doppler_shift_intrinsic = self.Doppler_shift_intrinsic[key[1:3]]
+                    if (N > 3):
+                        new_spectra.wavelengths = self.wavelengths[key[3]]
         new_spectra.data = self.data[key]
         return new_spectra
 
@@ -436,13 +440,11 @@ class Lightcurve(object):
         append another Lightcurve having different bands
         """
         def check_identical():
-            if (self.data.shape[:-2] != lc2.data.shape[:-2]):
+            if (self.data.shape[:-1] != lc2.data.shape[:-1]):
                 raise ValueError("2 lightcurves have different shape!")
-            flag_identical = np.product(np.array([
-                self.times == lc2.times, 
-                self.thetas == lc2.thetas, 
-                self.phis == lc2.phis, 
-            ]))            
+            flag_identical  = np.product(self.times  == lc2.times)
+            flag_identical *= np.product(self.thetas == lc2.thetas)
+            flag_identical *= np.product(self.phis   == lc2.phis)
             if not (flag_identical):
                 raise ValueError("2 lightcurves have different values in times, thetas, or phis!")
 
