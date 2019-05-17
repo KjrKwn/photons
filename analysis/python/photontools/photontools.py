@@ -420,16 +420,20 @@ class Lightcurve(object):
     
     def __getitem__(self, *key):
         new_lc = copy.deepcopy(self)
-        N = len(key)
-        new_lc.times = self.times[key[0]]
-        if (N > 1):
-            new_lc.thetas = self.thetas[key[1]]
-            if (N > 2):
-                new_lc.phis = self.phis[key[2]]
-                if self.Doppler_shift_intrinsic is not None:
-                    new_lc.Doppler_shift_intrinsic = self.Doppler_shift_intrinsic[key[1:3]]
-                if (N > 3):
-                    new_lc.wavelengths = self.wavelengths[key[3]]
+        if type(key) != tuple:
+            # only 1st index is given
+            new_lc.times = self.times[key]
+        else:
+            N = len(key)
+            new_lc.times = self.times[key[0]]
+            if (N > 1):
+                new_lc.thetas = self.thetas[key[1]]
+                if (N > 2):
+                    new_lc.phis = self.phis[key[2]]
+                    if self.Doppler_shift_intrinsic is not None:
+                        new_lc.Doppler_shift_intrinsic = self.Doppler_shift_intrinsic[key[1:3]]
+                    if (N > 3):
+                        new_lc.wavelengths = self.wavelengths[key[3]]
         new_lc.data = self.data[key]
         return new_lc
 
