@@ -418,7 +418,7 @@ class Lightcurve(object):
         self.data = None
         self.Doppler_shift_intrinsic = None
     
-    def __getitem__(self, *key):
+    def __getitem__(self, key):
         new_lc = copy.deepcopy(self)
         if type(key) != tuple:
             # only 1st index is given
