@@ -254,6 +254,7 @@ class Spectra(object):
         lc.times  = self.times
         lc.thetas = self.thetas
         lc.phis   = self.phis
+        lc.Doppler_shift_intrinsic   = self.Doppler_shift_intrinsic
         lc.bands  = np.array(["Lbol"])
         lc.data   = self.data[:,:,:, 1:] * np.diff(self.wavelengths)
         lc.data   = lc.data.sum(axis=-1)
@@ -433,7 +434,7 @@ class Lightcurve(object):
                     if self.Doppler_shift_intrinsic is not None:
                         new_lc.Doppler_shift_intrinsic = self.Doppler_shift_intrinsic[key[1:3]]
                     if (N > 3):
-                        new_lc.wavelengths = self.wavelengths[key[3]]
+                        new_lc.bands = self.bands[key[3]]
         new_lc.data = self.data[key]
         return new_lc
 
