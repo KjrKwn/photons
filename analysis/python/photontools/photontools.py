@@ -30,9 +30,9 @@ def _spectra_Doppler_shift_by_intrinsic_velocity(spectra,
     ways_avail_theta_phi  = ["linear", "equal solid angle"]
 
     if not(np.sum([way_interpolate_wavelength == way_avail for way_avail in ways_avail_wavelength])):
-        raise ValueError("way_interpolate_wavelength {} is not supported now")
+        raise ValueError("way_interpolate_wavelength {} is not supported now".format(way_interpolate_wavelength))
     if not(np.sum([way_interpolate_theta_phi == way_avail for way_avail in ways_avail_theta_phi])):
-        raise ValueError("way_interpolate_theta_phi {} is not supported now")
+        raise ValueError("way_interpolate_theta_phi {} is not supported now".format(way_interpolate_theta_phi))
 
     new_spectra = copy.deepcopy(spectra)
     print("This Doppler shift only changes spectra.data!")
@@ -113,19 +113,19 @@ class Spectra(object):
         new_spectra = copy.deepcopy(self)
         if type(key) != tuple:
             # only 1st index is given
-            new_spectra.times = self.times[key]
+            new_spectra.times = np.array([self.times[key]]).flatten()
         else:
             N = len(key)
-            new_spectra.times = self.times[key[0]]
+            new_spectra.times = np.array([self.times[key[0]]]).flatten()
             if (N > 1):
-                new_spectra.thetas = self.thetas[key[1]]
+                new_spectra.thetas = np.array([self.thetas[key[1]]]).flatten()
                 if (N > 2):
-                    new_spectra.phis = self.phis[key[2]]
+                    new_spectra.phis = np.array([self.phis[key[2]]]).flatten()
                     if self.Doppler_shift_intrinsic is not None:
-                        new_spectra.Doppler_shift_intrinsic = self.Doppler_shift_intrinsic[key[1:3]]
+                        new_spectra.Doppler_shift_intrinsic = np.array([self.Doppler_shift_intrinsic[key[1:3]]]).reshape(new_spectra.thetas.size, new_spectra.phis.size)
                     if (N > 3):
-                        new_spectra.wavelengths = self.wavelengths[key[3]]
-        new_spectra.data = self.data[key]
+                        new_spectra.wavelengths = np.array([self.wavelengths[key[3]]]).flatten()
+        new_spectra.data = np.array(self.data[key]).reshape(new_spectra.times.size, new_spectra.thetas.size, new_spectra.phis.size, new_spectra.wavelengths.size)
         return new_spectra
 
 
@@ -423,19 +423,20 @@ class Lightcurve(object):
         new_lc = copy.deepcopy(self)
         if type(key) != tuple:
             # only 1st index is given
-            new_lc.times = self.times[key]
+            new_lc.times = np.array([self.times[key]]).flatten()
         else:
             N = len(key)
-            new_lc.times = self.times[key[0]]
+            new_lc.times = np.array([self.times[key[0]]]).flatten()
             if (N > 1):
-                new_lc.thetas = self.thetas[key[1]]
+                new_lc.thetas = np.array([self.thetas[key[1]]]).flatten()
                 if (N > 2):
-                    new_lc.phis = self.phis[key[2]]
+                    new_lc.phis = np.array([self.phis[key[2]]]).flatten()
                     if self.Doppler_shift_intrinsic is not None:
-                        new_lc.Doppler_shift_intrinsic = self.Doppler_shift_intrinsic[key[1:3]]
+                        new_lc.Doppler_shift_intrinsic = np.array([self.Doppler_shift_intrinsic[key[1:3]]]).reshape(new_lc.thetas.size, new_lc.phis.size)
                     if (N > 3):
-                        new_lc.bands = self.bands[key[3]]
-        new_lc.data = self.data[key]
+                        new_lc.bands = np.array([self.bands[key[3]]]).flatten()
+        new_lc.data = np.array(self.data[key]).reshape(new_lc.times.size, new_lc.thetas.size, new_lc.phis.size, new_lc.bands.size)
+
         return new_lc
 
     
@@ -501,7 +502,7 @@ class Lightcurve(object):
         
         way_avail_interpolate_time = ["linear", "exponential"]
         if not (np.sum([way_interpolate_time == way_avail for way_avail in way_avail_interpolate_time])):
-            raise ValueError("way {} is not supported now")
+            raise ValueError("way {} is not supported now".format(way_interpolate_time))
 
         if (self.thetas.size % N_theta_bins != 0):
             raise ValueError ("mod(N_theta_input, N_theta_bins) must be 0")
@@ -557,6 +558,11 @@ class Lightcurve(object):
             data = np.sum(data * time_delta.reshape(N_time_bins, every_time), axis=-1) / time_delta.reshape(N_time_bins, every_time).sum(axis=1)
             # [N_phi_bins,N_wavelength_bins,N_theta_bins,N_time_bins] => [N_time_bins,N_theta_bins,N_phi_bins,N_wavelength_bins]
             data = data.swapaxes(0, 3).swapaxes(1, 2).swapaxes(2, 3)
+
+        # intrinsic redshift is simple mean of initial redshift
+        if self.Doppler_shift_intrinsic is not None:
+            Doppler_shift_arr = self.Doppler_shift_intrinsic.reshape(N_theta_bins, theta_every, N_phi_bins, phi_every)
+            new_lc.Doppler_shift_intrinsic = Doppler_shift_arr.mean(axis=(1,3))
 
         new_lc.data = data
 
@@ -625,6 +631,50 @@ class Lightcurve(object):
         else:
             return new_lc
 
+    def interpolate_time(self,
+                         time_array,
+                         way_interpolate="linear",
+                         consider_Doppler_shift=False,
+                         inplace = False):
+        """
+        arguments
+        =========
+        time_array     : array of times you want to get photometories by interpolation of model light curves
+        way_interpolate: how to interpolate model light curves
+                         available methods are ["linear"]
+
+        return
+        ======
+        new_lc: Lightcurve with times of time_array
+        """
+        
+        ways_avail_interpolate = ["linear"]
+        if not(np.sum([way_interpolate == way_avail for way_avail in ways_avail_interpolate])):
+            raise ValueError("way_interpolate {} is not supported now".format(way_interpolate))
+
+        new_lc = copy.deepcopy(self)
+        
+        time_array = np.array(time_array)
+        base_time_for_interp = time_array - time_array.min()
+        tmax_w_offset = base_time_for_interp.max() * 1.01
+        new_lc.times = time_array
+        new_lc.data  = np.zeros(np.append(time_array.size, list(self.data.shape[1:])), dtype=float)
+
+        if not (consider_Doppler_shift):
+            interp_times = time_array
+        else:
+            raise ValueError("consider Doppler shift is not supported yet!")
+        for i in range(self.thetas.size):
+            for j in range(self.phis.size):
+                pass
+
+
+        if (inplace):
+            self = new_lc
+            return 
+        else:
+            return new_lc
+
 class Filter(object):
     """
     
@@ -681,7 +731,7 @@ class Filter(object):
         # check the given way is available or not
         ways_avail = ["linear"]
         if not(np.sum([way == way_avail for way_avail in ways_avail])):
-            raise ValueError("way {} is not supported now")
+            raise ValueError("way {} is not supported now".format(way))
         
         self.sort_by_wavelength()
         responses = np.zeros((len(self.bands), wavelength_input.size), dtype=np.float)
