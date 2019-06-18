@@ -257,7 +257,7 @@ class Spectra(object):
         lc.Doppler_shift_intrinsic   = self.Doppler_shift_intrinsic
         lc.bands  = np.array(["Lbol"])
         lc.data   = self.data[:,:,:, 1:] * np.diff(self.wavelengths)
-        lc.data   = lc.data.sum(axis=-1)
+        lc.data   = lc.data.sum(axis=-1).reshape(lc.times.size, lc.thetas.size, lc.phis.size, 1)
         return lc
 
 
@@ -635,13 +635,17 @@ class Lightcurve(object):
                          time_array,
                          way_interpolate="linear",
                          consider_Doppler_shift=False,
+                         left=None,
+                         right=None,
                          inplace = False):
         """
         arguments
         =========
-        time_array     : array of times you want to get photometories by interpolation of model light curves
-        way_interpolate: how to interpolate model light curves
-                         available methods are ["linear"]
+        time_array            : array of times you want to get photometories by interpolation of model light curves
+        way_interpolate       : how to interpolate model light curves
+                                available methods are ["linear"]
+        consider_Doppler_shift: 
+        left, right           : options in np.interp
 
         return
         ======
@@ -655,19 +659,19 @@ class Lightcurve(object):
         new_lc = copy.deepcopy(self)
         
         time_array = np.array(time_array)
-        base_time_for_interp = time_array - time_array.min()
-        tmax_w_offset = base_time_for_interp.max() * 1.01
         new_lc.times = time_array
         new_lc.data  = np.zeros(np.append(time_array.size, list(self.data.shape[1:])), dtype=float)
 
         if not (consider_Doppler_shift):
-            interp_times = time_array
+            for i in range(self.thetas.size):
+                for j in range(self.phis.size):
+                    for k, band in enumerate(self.bands):
+                        new_lc.data[:,i,j,k] = np.interp(time_array, self.times, self.data[:,i,j,k], left=left, right=right)
         else:
-            raise ValueError("consider Doppler shift is not supported yet!")
-        for i in range(self.thetas.size):
-            for j in range(self.phis.size):
-                pass
-
+            for i in range(self.thetas.size):
+                for j in range(self.phis.size):
+                    for k, band in enumerate(self.bands):
+                        new_lc.data[:,i,j,k] = np.interp(time_array, self.times * self.Doppler_shift_intrinsic[i,j], self.data[:,i,j,k], left=left, right=right)
 
         if (inplace):
             self = new_lc
