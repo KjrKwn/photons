@@ -845,9 +845,14 @@ def read_Maeda_data(filepath, force=False):
 # MacLeod et al. 2016
 
 def read_MacLeod_data(
-    directory = "/Users/kawana/GoogleDrive/sync/study/yoshidalab/mypaper/0002_WD_TDE_radiation_transfer/WhiteDwarf_Thermonuclear_Transients/", 
+    directory = "/Users/kawana/GoogleDrive/sync/study/yoshidalab/mypaper/0002_WD_TDE_radiative_transfer/WhiteDwarf_Thermonuclear_Transients/", 
     Force = False
 ):    
+    """
+    return
+    ======
+    Lightcurve, Spectra
+    """
     
     def extract_headers(data):
         times  = np.unique(data["time"])
