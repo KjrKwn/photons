@@ -948,7 +948,7 @@ def read_all_filters(directory = "./photontools/filter_data"):
     filters = [Filter()] * len(dirs)
 
     for i, fil in enumerate(filters):
-        print(dirs[i])
+        print(i, dirs[i])
         filters[i] = read_one_instrument_filters(directory=dirs[i])
 
     return filters
